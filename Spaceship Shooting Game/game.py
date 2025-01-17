@@ -12,9 +12,11 @@ pygame.display.set_caption("Spaceship Shooting Game")
 
 player_image = pygame.image.load("main.png").convert_alpha() 
 target_image = pygame.image.load("enemy.png").convert_alpha() 
+bullet_image = pygame.image.load("bullet.png").convert_alpha() 
 
 player_image = pygame.transform.scale(player_image, (50, 50))  
-target_image = pygame.transform.scale(target_image, (50, 50))    
+target_image = pygame.transform.scale(target_image, (50, 50)) 
+bullet_image = pygame.transform.scale(bullet_image, (50, 50))    
 
 class Player:
     def __init__(self):
@@ -29,7 +31,7 @@ class Player:
 
 class Bullet:
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, 5, 10)  
+        self.rect = bullet_image.get_rect(center=(x, y))  
 
     def update(self):
         self.rect.y -= 10
@@ -40,13 +42,13 @@ class Target:
         self.rect = target_image.get_rect(center=(random.randint(0, WIDTH - 50), 0))
 
     def update(self):
-        self.rect.y += 2                #speed of enemy
+        self.rect.y += 3                # Speed of enemy
         return self.rect.top > HEIGHT  
 
 def main():
     clock = pygame.time.Clock()
     player = Player()
-    bullets = []
+    bullet = None  # Track the current bullet
     targets = []
     score = 0
     game_over = False
@@ -62,13 +64,15 @@ def main():
             player.move(-5)
         if keys[pygame.K_RIGHT]:
             player.move(5)
-        if keys[pygame.K_SPACE]:
-            bullets.append(Bullet(player.rect.centerx - 2.5, player.rect.top)) 
+        if keys[pygame.K_SPACE] and bullet is None:  # Only fire if there's no bullet
+            bullet = Bullet(player.rect.centerx, player.rect.top) 
 
         if not game_over:
-            bullets = [b for b in bullets if not b.update()]
+            if bullet is not None:
+                if bullet.update():  # Update the bullet and check if it's off-screen
+                    bullet = None  # Reset bullet if it's off-screen
 
-            if random.randint(1, 30) == 1:          #rate of enemy
+            if random.randint(1, 30) == 1:          # Rate of enemy
                 targets.append(Target())
 
             for target in targets[:]:
@@ -77,20 +81,20 @@ def main():
                 
                 if target.rect.bottom > HEIGHT - 50:
                     # score += 1
-                    game_over = True                # Stop the game
+                    game_over = True  # Stop the game
 
-            for bullet in bullets[:]:
+            if bullet is not None:  # Check for collisions only if bullet exists
                 for target in targets[:]:
                     if bullet.rect.colliderect(target.rect):
-                        bullets.remove(bullet)
                         targets.remove(target)
+                        bullet = None  # Reset bullet after collision
                         score += 1
                         break
 
             screen.fill((0, 0, 0)) 
             screen.blit(player_image, player.rect)
-            for bullet in bullets:
-                pygame.draw.rect(screen, (255, 255, 255), bullet.rect) 
+            if bullet is not None:  # Draw the bullet if it exists
+                screen.blit(bullet_image, bullet.rect)
             for target in targets:
                 screen.blit(target_image, target.rect)
 
